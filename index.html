@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>キネコ PR活動 保管庫</title>
+<style>
+:root{
+  --bg:#faf7f2; --panel:#fff; --ink:#1f1b16; --muted:#7a7168; --line:#e7ded1;
+  --accent:#dd5a2f; --accent-soft:#fdeee8;
+  --blue:#3178b8; --blue-soft:#e8f0f8;
+  --violet:#6b4ea8; --violet-soft:#efe9fa;
+  --green:#3f7d4f; --green-soft:#e6f1e8;
+  --amber:#a8760c; --amber-soft:#fbf0d8;
+  --gray:#94897c; --gray-soft:#f0ece5;
+  --shadow:0 1px 2px rgba(31,27,22,.05), 0 8px 24px rgba(31,27,22,.06);
+  --radius:16px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#17140f; --panel:#211d17; --ink:#f2ece2; --muted:#a3998b; --line:#352f26;
+  --accent:#e8663a; --accent-soft:#3a2117;
+  --blue:#4f9cd8; --blue-soft:#16283a;
+  --violet:#b39ae8; --violet-soft:#241a3a;
+  --green:#6fb583; --green-soft:#16301d;
+  --amber:#e0b355; --amber-soft:#332609;
+  --gray:#7f766c; --gray-soft:#2a251f;
+}}
+*{box-sizing:border-box} html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic Medium","Meiryo",system-ui,-apple-system,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:28px 20px 90px}
+header.top{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;margin-bottom:22px}
+h1{font-size:24px;margin:0;letter-spacing:.01em}
+h1 small{display:block;font-size:12.5px;font-weight:400;color:var(--muted);margin-top:5px}
+button,.btn{font:inherit;font-size:13px;padding:8px 15px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);cursor:pointer;box-shadow:var(--shadow);transition:.15s;text-decoration:none}
+button:hover,.btn:hover{border-color:var(--accent);color:var(--accent)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ロードマップ帯 */
+.road{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px 22px;margin-bottom:14px;box-shadow:var(--shadow)}
+.road-h{font-size:14px;font-weight:800;margin-bottom:16px}
+.road-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.rd{border:1px solid var(--line);border-radius:12px;padding:14px 15px;background:var(--bg);position:relative}
+.rd.now{border-color:var(--accent);background:var(--accent-soft)}
+.rd-y{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.06em}
+.rd.now .rd-y{color:var(--accent)}
+.rd-t{font-size:13.5px;font-weight:700;margin-top:5px;line-height:1.55}
+.rd-badge{position:absolute;top:-9px;right:12px;font-size:10px;font-weight:800;color:#fff;
+  background:var(--accent);padding:2px 9px;border-radius:999px}
+@media(max-width:700px){.road-grid{grid-template-columns:1fr}}
+
+/* 集計 */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:11px;margin-bottom:22px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 16px;box-shadow:var(--shadow)}
+.tile .n{font-size:27px;font-weight:800;line-height:1.1;letter-spacing:-.02em}
+.tile .l{font-size:11.5px;color:var(--muted);margin-top:2px}
+
+/* 絞り込み */
+.filters{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:22px}
+.f-l{font-size:11.5px;font-weight:800;color:var(--muted);margin-right:2px}
+.chip{font-size:12.5px;font-weight:600;padding:5px 13px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel);color:var(--muted);cursor:pointer;box-shadow:none}
+.chip b{margin-left:4px;opacity:.6;font-weight:800}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip.on b{opacity:.85}
+
+/* タイムライン */
+.year{display:flex;align-items:center;gap:12px;margin:30px 0 16px}
+.year h2{font-size:19px;margin:0;letter-spacing:.02em}
+.year .cnt{font-size:11.5px;font-weight:700;color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+.year hr{flex:1;border:none;border-top:1px solid var(--line);margin:0}
+.tl{position:relative;padding-left:30px}
+.tl::before{content:'';position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.item{position:relative;margin-bottom:13px}
+.item::before{content:'';position:absolute;left:-26px;top:19px;width:11px;height:11px;border-radius:50%;
+  background:var(--panel);border:2.5px solid var(--gray)}
+.item.t-投稿::before{border-color:var(--accent)}
+.item.t-活動::before{border-color:var(--blue)}
+.item.t-制作物::before{border-color:var(--violet)}
+.item.t-報告書::before{border-color:var(--green)}
+.item.t-メディア掲載::before{border-color:var(--amber)}
+.item.plan::before{background:var(--accent);border-color:var(--accent);width:15px;height:15px;left:-28px;top:17px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 17px;box-shadow:var(--shadow)}
+.item.plan .card{border-left:4px solid var(--accent);background:var(--accent-soft)}
+.c-top{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:4px}
+.date{font-size:11.5px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.badge{font-size:10.5px;font-weight:800;padding:2px 9px;border-radius:999px;white-space:nowrap;
+  background:var(--gray-soft);color:var(--gray)}
+.badge.b-投稿{background:var(--accent-soft);color:var(--accent)}
+.badge.b-活動{background:var(--blue-soft);color:var(--blue)}
+.badge.b-制作物{background:var(--violet-soft);color:var(--violet)}
+.badge.b-報告書{background:var(--green-soft);color:var(--green)}
+.badge.b-メディア掲載{background:var(--amber-soft);color:var(--amber)}
+.who{font-size:11.5px;color:var(--muted);margin-left:auto}
+.title{font-size:15px;font-weight:700;line-height:1.55;word-break:break-word}
+.desc{font-size:13px;color:var(--muted);margin-top:5px;white-space:pre-wrap;line-height:1.7}
+.meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:9px}
+.pill{font-size:11.5px;padding:3px 11px;border-radius:999px;background:var(--bg);
+  border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.num{background:var(--green-soft);color:var(--green);border-color:transparent;font-weight:700}
+a.link{font-size:12.5px;font-weight:700;color:var(--accent);text-decoration:none;
+  border:1px solid var(--accent);border-radius:999px;padding:3px 12px;white-space:nowrap}
+a.link:hover{background:var(--accent);color:#fff}
+.empty{color:var(--muted);font-size:13.5px;padding:26px;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius);text-align:center}
+.note{font-size:12.5px;background:var(--amber-soft);color:var(--amber);border-radius:12px;
+  padding:11px 15px;margin-bottom:18px;font-weight:600}
+footer{margin-top:46px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.85}
+footer a{color:var(--accent)}
+@media(max-width:600px){
+  .wrap{padding:20px 14px 70px} h1{font-size:20px}
+  .tiles{grid-template-columns:1fr 1fr} .who{margin-left:0;flex-basis:100%}
+  .tl{padding-left:22px} .tl::before{left:4px} .item::before{left:-23px} .item.plan::before{left:-25px}
+}
+@media print{ .toolbar,.filters{display:none!important} body{background:#fff} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <h1>キネコ PR活動 保管庫<small id="meta">読み込み中…</small></h1>
+  <div class="toolbar">
+    <a class="btn" id="sheet" target="_blank" rel="noopener">スプレッドシートを開く</a>
+    <button id="reload">最新に更新</button>
+  </div>
+</header>
+
+<div id="road"></div>
+<div class="tiles" id="tiles"></div>
+<div class="filters" id="filters"></div>
+<div id="body"></div>
+
+<footer>
+  データは Googleスプレッドシート「キネコ PR活動ログ」から読み込んでいます。<br>
+  <b>新しい活動を足すときは、スプレッドシートに1行追加するだけです。</b>このページを開き直せば反映されます。
+</footer>
+</div>
+
+<script>
+const SHEET_ID='1ryxnAGsgD-PdZxpGtr_VKsm8UVVX4XnBu-sIakDQt08';
+const SHEET_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/edit';
+const CSV_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv';
+const FALLBACK="日付,種別,タイトル,媒体・場所,担当,概要,URL,ファイル,反応・数字,年度,タグ\n2026-07-24,投稿,【大きなエアスクリーンで夏の夜を楽しみませんか？】,Instagram,キネコ公式,,https://www.instagram.com/p/DbMkEfyAc80/,,いいね40・コメント0,2026,野外上映\n2026-07-25,投稿,【監督に直接、質問できるかも！？】,Instagram,キネコ公式,,https://www.instagram.com/kineko_filmfes/p/DbPxeB-gT_6/,,いいね31・コメント0,2026,ゲスト\n2026-07-26,投稿,【主演俳優 登壇決定！】,Instagram,キネコ公式,,https://www.instagram.com/kineko_filmfes/p/DbRzpnkgdyF/,,いいね37・コメント0,2026,ゲスト\n2026-08-09,投稿,映画を観終えたあと、この作品が伝えたかったことを理解し…,Instagram（リール）,キネコ公式,,https://www.instagram.com/reel/Db2Xap-B76y/,,いいね51・コメント1,2026,感想・リール\n2026-08-11,投稿,映画を観たあとの、素直な感想。,Instagram（リール）,キネコ公式,,https://www.instagram.com/reel/Db7O3G4hYud/,,いいね31・コメント0,2026,感想・リール\n2026-08-28,活動,ティーンズPR活動 ボランティア説明会,新宿三丁目 カイクラフト本社 ＋ Zoom,あつこさん,来社8名・Zoom7名が参加予定。事前アンケート29件の回答まとめは右のURL,https://yamadagenki0526icloudcom-hash.github.io/kineko-volunteers/,,,2026,ボランティア\n2026-04-01,計画・目標,【1年目】ボランティアと協力してPR活動を始める,,,※たたき台。あつこさんと詰める,,,,2026,ロードマップ\n2027-04-01,計画・目標,【2年目】ボランティアがPRの内容を自分たちで考える段階へ,,,※たたき台。あつこさんと詰める,,,,2027,ロードマップ\n2028-04-01,計画・目標,【3年目】企画・ゲスト選定・営業までボランティアが自走する,,,※たたき台。あつこさんと詰める,,,,2028,ロードマップ\n";
+
+document.getElementById('sheet').href=SHEET_URL;
+
+function parseCSV(text){
+  text=text.replace(/^﻿/,'');
+  const rows=[]; let row=[],cell='',q=false;
+  for(let i=0;i<text.length;i++){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; } else cell+=c; }
+    else if(c==='"') q=true;
+    else if(c===','){ row.push(cell); cell=''; }
+    else if(c==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; }
+    else if(c!=='\r') cell+=c;
+  }
+  if(cell.length||row.length){ row.push(cell); rows.push(row); }
+  return rows.filter(r=>r.some(v=>v.trim()!==''));
+}
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function toItems(rows){
+  const head=rows[0].map(s=>s.trim());
+  const ix=n=>head.findIndex(h=>h.includes(n));
+  const I={date:ix('日付'),kind:ix('種別'),title:ix('タイトル'),place:ix('媒体'),
+           who:ix('担当'),desc:ix('概要'),url:ix('URL'),file:ix('ファイル'),
+           num:ix('反応'),year:ix('年度'),tag:ix('タグ')};
+  const g=(r,k)=>I[k]>=0?(r[I[k]]||'').trim():'';
+  return rows.slice(1).map(r=>({
+    date:g(r,'date'), kind:g(r,'kind')||'その他', title:g(r,'title'),
+    place:g(r,'place'), who:g(r,'who'), desc:g(r,'desc'), url:g(r,'url'),
+    file:g(r,'file'), num:g(r,'num'), year:g(r,'year'), tag:g(r,'tag'),
+  })).filter(x=>x.date||x.title);
+}
+
+let ITEMS=[], fKind='', fYear='';
+
+function fiscal(d){ const m=/^(\d{4})-(\d{2})/.exec(d); if(!m) return '';
+  return (+m[2]>=4? +m[1] : +m[1]-1)+''; }
+
+function render(){
+  const years=[...new Set(ITEMS.map(i=>i.year||fiscal(i.date)).filter(Boolean))].sort();
+  const kinds=[...new Set(ITEMS.map(i=>i.kind))];
+  const P=ITEMS.filter(i=>(!fKind||i.kind===fKind)&&(!fYear||(i.year||fiscal(i.date))===fYear));
+
+  /* ロードマップ */
+  const plans=ITEMS.filter(i=>/計画|目標/.test(i.kind)).sort((a,b)=>a.date.localeCompare(b.date));
+  const nowY=fiscal(new Date().toISOString().slice(0,10));
+  document.getElementById('road').innerHTML = plans.length? `<div class="road">
+    <div class="road-h">3年計画</div>
+    <div class="road-grid">${plans.map(p=>{
+      const y=p.year||fiscal(p.date), now=y===nowY;
+      return `<div class="rd${now?' now':''}">
+        ${now?'<span class="rd-badge">いまここ</span>':''}
+        <div class="rd-y">${esc(y)}年度</div>
+        <div class="rd-t">${esc(p.title.replace(/^【.+?】/,''))}</div>
+      </div>`;}).join('')}</div></div>`:'';
+
+  /* 集計 */
+  const done=ITEMS.filter(i=>!/計画|目標/.test(i.kind));
+  const posts=done.filter(i=>i.kind==='投稿').length;
+  const acts=done.filter(i=>i.kind==='活動').length;
+  const vol=done.filter(i=>/ボランティア/.test(i.who)).length;
+  document.getElementById('tiles').innerHTML=`
+    <div class="tile"><div class="n">${done.length}</div><div class="l">記録された活動</div></div>
+    <div class="tile"><div class="n">${posts}</div><div class="l">投稿</div></div>
+    <div class="tile"><div class="n">${acts}</div><div class="l">イベント・集まり</div></div>
+    <div class="tile"><div class="n">${vol}</div><div class="l">ボランティアが担当</div></div>`;
+
+  /* 絞り込み */
+  const chip=(v,l,n,cur,attr)=>`<button class="chip${cur===v?' on':''}" data-${attr}="${esc(v)}">${esc(l)}<b>${n}</b></button>`;
+  document.getElementById('filters').innerHTML=
+    `<span class="f-l">種別</span>`+
+    chip('','すべて',ITEMS.length,fKind,'kind')+
+    kinds.map(k=>chip(k,k,ITEMS.filter(i=>i.kind===k).length,fKind,'kind')).join('')+
+    (years.length>1?`<span class="f-l" style="margin-left:10px">年度</span>`+
+      chip('','すべて',ITEMS.length,fYear,'year')+
+      years.map(y=>chip(y,y+'年度',ITEMS.filter(i=>(i.year||fiscal(i.date))===y).length,fYear,'year')).join(''):'');
+
+  /* タイムライン */
+  const byYear={};
+  P.slice().sort((a,b)=>b.date.localeCompare(a.date)).forEach(i=>{
+    const y=i.year||fiscal(i.date)||'日付なし'; (byYear[y]=byYear[y]||[]).push(i); });
+  const keys=Object.keys(byYear).sort().reverse();
+  document.getElementById('body').innerHTML = keys.length? keys.map(y=>`
+    <div class="year"><h2>${esc(y)}年度</h2><span class="cnt">${byYear[y].length}件</span><hr></div>
+    <div class="tl">${byYear[y].map(card).join('')}</div>`).join('')
+    : `<div class="empty">該当する記録がありません</div>`;
+}
+
+function card(i){
+  const plan=/計画|目標/.test(i.kind);
+  return `<div class="item t-${esc(i.kind)}${plan?' plan':''}">
+    <div class="card">
+      <div class="c-top">
+        <span class="date">${esc(i.date)}</span>
+        <span class="badge b-${esc(i.kind)}">${esc(i.kind)}</span>
+        ${i.who?`<span class="who">${esc(i.who)}</span>`:''}
+      </div>
+      <div class="title">${esc(i.title)}</div>
+      ${i.desc?`<div class="desc">${esc(i.desc)}</div>`:''}
+      <div class="meta">
+        ${i.place?`<span class="pill">${esc(i.place)}</span>`:''}
+        ${i.tag?`<span class="pill">${esc(i.tag)}</span>`:''}
+        ${i.num?`<span class="pill num">${esc(i.num)}</span>`:''}
+        ${i.url?`<a class="link" href="${esc(i.url)}" target="_blank" rel="noopener">開く</a>`:''}
+        ${i.file?`<a class="link" href="${esc(i.file)}" target="_blank" rel="noopener">資料</a>`:''}
+      </div>
+    </div></div>`;
+}
+
+document.addEventListener('click',e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  if('kind' in c.dataset) fKind=c.dataset.kind;
+  if('year' in c.dataset) fYear=c.dataset.year;
+  render();
+});
+document.getElementById('reload').onclick=()=>load(true);
+
+function setMeta(txt){ document.getElementById('meta').textContent=txt; }
+
+async function load(force){
+  try{
+    const res=await fetch(CSV_URL+(force?'&_='+Math.random():''),{cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const txt=await res.text();
+    if(/^\s*</.test(txt)) throw new Error('シートが公開されていません');
+    ITEMS=toItems(parseCSV(txt));
+    setMeta(`全${ITEMS.length}件 ／ スプレッドシートから読み込み`);
+    document.querySelector('.note')?.remove();
+  }catch(err){
+    ITEMS=toItems(parseCSV(FALLBACK));
+    setMeta(`全${ITEMS.length}件 ／ このページに保存された内容`);
+    if(!document.querySelector('.note')){
+      const d=document.createElement('div'); d.className='note';
+      d.textContent='スプレッドシートを読み込めませんでした（'+err.message+'）。共有設定を「リンクを知っている全員が閲覧可」にすると、追加した行がそのままここに反映されます。';
+      document.getElementById('road').before(d);
+    }
+  }
+  render();
+}
+load(false);
+</script>
+</body>
+</html>
