@@ -158,9 +158,18 @@ button.danger:hover{background:var(--accent);color:#fff;border-color:var(--accen
 .dimg{margin-top:12px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
 .dimg img{display:block;width:100%;height:auto}
 @media(max-width:480px){.drow{grid-template-columns:1fr;gap:2px;padding:8px 0}}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;z-index:60;
+.trow{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
+  padding:12px 0;border-bottom:1px solid var(--line)}
+.trow:last-child{border-bottom:none}
+.trow .tt{font-size:14px;font-weight:600;line-height:1.5}
+.trow .td{font-size:11.5px;color:var(--muted);margin-top:2px}
+.trow button{font-size:12.5px;padding:6px 14px;white-space:nowrap}
+.toast{display:flex;align-items:center;gap:14px;position:fixed;left:50%;transform:translateX(-50%);bottom:26px;z-index:60;
   background:var(--ink);color:var(--bg);font-size:13.5px;font-weight:600;
-  padding:11px 20px;border-radius:999px;box-shadow:var(--shadow)}
+  padding:10px 14px 10px 20px;border-radius:999px;box-shadow:var(--shadow)}
+.toast button{background:none;border:1px solid rgba(255,255,255,.45);color:inherit;
+  box-shadow:none;font-size:12.5px;font-weight:600;padding:5px 13px}
+.toast button:hover{background:rgba(255,255,255,.15);color:inherit;border-color:rgba(255,255,255,.7)}
 footer{margin-top:46px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.85}
 footer a{color:var(--accent)}
 @media(max-width:600px){
@@ -177,6 +186,7 @@ footer a{color:var(--accent)}
   <h1>キネコ PR活動 保管庫<small id="meta">読み込み中…</small></h1>
   <div class="toolbar">
     <button class="primary" id="add">＋ 活動を追加</button>
+    <button id="trash" hidden>ゴミ箱</button>
     <button id="csv">CSVで書き出す</button>
     <button id="reload">最新に更新</button>
   </div>
@@ -193,12 +203,22 @@ footer a{color:var(--accent)}
 </footer>
 </div>
 
+<div class="modal" id="tmodal" hidden>
+  <div class="sheetbox">
+    <div class="sh-h"><span>ゴミ箱</span><button id="tx" aria-label="閉じる">×</button></div>
+    <div class="sh-b" id="tbody"></div>
+    <div class="sh-f" style="padding:14px 20px 18px">
+      <button id="tclose" class="primary">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="dmodal" hidden>
   <div class="sheetbox">
     <div class="sh-h"><span id="d-title">活動の詳細</span><button id="dx" aria-label="閉じる">×</button></div>
     <div class="sh-b" id="dbody"></div>
     <div class="sh-f" style="padding:14px 20px 18px">
-      <button id="del" class="danger">削除</button>
+      <button id="del" class="danger">ゴミ箱に移す</button>
       <button id="edit">編集</button>
       <button id="dclose" class="primary">閉じる</button>
     </div>
@@ -270,7 +290,7 @@ function parseCSV(text){
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 function fromDB(rows){
-  return rows.map(r=>({id:r.id,date:(r.date||'').slice(0,10),kind:r.kind||'その他',title:r.title||'',
+  return rows.map(r=>({id:r.id,del:r.deleted_at,date:(r.date||'').slice(0,10),kind:r.kind||'その他',title:r.title||'',
     place:r.place||'',who:r.who||'',desc:r.description||'',url:r.url||'',
     file:r.file_url||'',num:r.metrics||'',year:'',tag:r.tag||''}));
 }
@@ -288,7 +308,7 @@ function toItems(rows){
   })).filter(x=>x.date||x.title);
 }
 
-let ITEMS=[], fKind='', fYear='';
+let ITEMS=[], TRASH=[], fKind='', fYear='';
 
 function fiscal(d){ const m=/^(\d{4})-(\d{2})/.exec(d); if(!m) return '';
   return (+m[2]>=4? +m[1] : +m[1]-1)+''; }
@@ -379,7 +399,11 @@ async function load(){
     try{
       const res=await fetch(REST+'?select=*&order=date.desc',{headers:H,cache:'no-store'});
       if(!res.ok) throw new Error('HTTP '+res.status);
-      ITEMS=fromDB(await res.json());
+      const all=fromDB(await res.json());
+      ITEMS=all.filter(x=>!x.del);
+      TRASH=all.filter(x=>x.del).sort((a,b)=>(b.del||'').localeCompare(a.del||''));
+      const tb=document.getElementById('trash');
+      tb.hidden=!TRASH.length; tb.textContent=`ゴミ箱 ${TRASH.length}`;
       setMeta(`全${ITEMS.length}件`);
       document.querySelector('.note')?.remove();
       render(); return;
@@ -396,9 +420,14 @@ function showNote(msg){
   const d=document.createElement('div'); d.className='note'; d.textContent=msg;
   document.getElementById('road').before(d);
 }
-function toast(msg){
-  const d=document.createElement('div'); d.className='toast'; d.textContent=msg;
-  document.body.appendChild(d); setTimeout(()=>d.remove(),2600);
+function toast(msg,action){
+  document.querySelector('.toast')?.remove();
+  const d=document.createElement('div'); d.className='toast';
+  d.appendChild(document.createTextNode(msg));
+  if(action){ const b=document.createElement('button'); b.textContent=action.label;
+    b.onclick=()=>{ d.remove(); action.run(); }; d.appendChild(b); }
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(), action?9000:2600);
 }
 
 /* ============ 追加フォーム ============ */
@@ -462,17 +491,47 @@ document.getElementById('dx').onclick=closeDetail;
 document.getElementById('dclose').onclick=closeDetail;
 dmodal.onclick=e=>{ if(e.target===dmodal) closeDetail(); };
 document.getElementById('edit').onclick=()=>{ const it=detailItem; closeDetail(); openModal(it); };
+async function setDeleted(id,val){
+  const code=getCode(); if(!code) throw new Error('合言葉が必要です');
+  const res=await fetch(REST+'?id=eq.'+id,{method:'PATCH',headers:codeHeaders(),
+    body:JSON.stringify({deleted_at:val})});
+  const ch=await res.json().catch(()=>[]);
+  if(!res.ok||!ch.length){ clearCode(); throw new Error('合言葉が違うようです'); }
+}
 document.getElementById('del').onclick=async()=>{
   const it=detailItem; if(!it) return;
-  if(!confirm(`「${it.title}」を削除します。元に戻せません。`)) return;
-  const code=getCode(); if(!code) return;
+  if(!confirm(`「${it.title}」をゴミ箱に移します。`)) return;
   try{
-    const res=await fetch(REST+'?id=eq.'+it.id,{method:'DELETE',headers:codeHeaders()});
-    const gone=await res.json().catch(()=>[]);
-    if(!res.ok||!gone.length){ clearCode(); throw new Error('合言葉が違うようです'); }
-    closeDetail(); toast('削除しました'); await load();
+    await setDeleted(it.id,new Date().toISOString());
+    closeDetail(); await load();
+    toast('ゴミ箱に移しました',{label:'元に戻す',run:async()=>{
+      try{ await setDeleted(it.id,null); await load(); toast('戻しました'); }
+      catch(e){ alert(e.message); } }});
   }catch(ex){ alert(ex.message); }
 };
+
+/* ---- ゴミ箱 ---- */
+const tmodal=document.getElementById('tmodal');
+function openTrash(){
+  document.getElementById('tbody').innerHTML = TRASH.length
+    ? TRASH.map(i=>`<div class="trow"><div>
+        <div class="tt">${esc(i.title)}</div>
+        <div class="td">${esc(i.date)}・${esc(i.kind)}${i.who?'・'+esc(i.who):''}</div>
+      </div><button data-restore="${esc(i.id)}">戻す</button></div>`).join('')
+    : '<p style="color:var(--muted);font-size:13.5px;padding:14px 0">ゴミ箱は空です</p>';
+  tmodal.hidden=false; document.body.style.overflow='hidden';
+}
+function closeTrash(){ tmodal.hidden=true; document.body.style.overflow=''; }
+document.getElementById('trash').onclick=openTrash;
+document.getElementById('tx').onclick=closeTrash;
+document.getElementById('tclose').onclick=closeTrash;
+tmodal.onclick=e=>{ if(e.target===tmodal) closeTrash(); };
+document.getElementById('tbody').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-restore]'); if(!b) return;
+  b.disabled=true; b.textContent='戻しています…';
+  try{ await setDeleted(b.dataset.restore,null); await load(); openTrash(); toast('戻しました'); }
+  catch(ex){ alert(ex.message); b.disabled=false; b.textContent='戻す'; }
+});
 document.addEventListener('click',e=>{
   if(e.target.closest('a')||e.target.closest('button')) return;
   const c=e.target.closest('.card[data-id]'); if(!c) return;
@@ -489,7 +548,7 @@ document.getElementById('x').onclick=closeModal;
 document.getElementById('cancel').onclick=closeModal;
 modal.onclick=e=>{ if(e.target===modal) closeModal(); };
 document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return;
-  if(!modal.hidden) closeModal(); else if(!dmodal.hidden) closeDetail(); });
+  if(!modal.hidden) closeModal(); else if(!dmodal.hidden) closeDetail(); else if(!tmodal.hidden) closeTrash(); });
 
 const SITES=[
   [/instagram\.com\/reel/i,'投稿','Instagram（リール）'],
