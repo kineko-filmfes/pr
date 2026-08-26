@@ -144,6 +144,19 @@ button:disabled{opacity:.5;cursor:default}
 .sh-f{position:sticky;bottom:0;background:var(--panel);display:flex;gap:9px;align-items:center;
   justify-content:flex-end;padding:14px 0 18px;border-top:1px solid var(--line);margin-top:4px}
 .err{font-size:12px;color:var(--accent);font-weight:700;margin-right:auto;text-align:left}
+.card[data-id]{cursor:pointer;transition:.13s}
+.card[data-id]:hover{border-color:var(--accent);transform:translateY(-1px)}
+.card[data-id]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.danger{color:var(--accent);border-color:var(--line)}
+button.danger:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.drow{display:grid;grid-template-columns:88px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.drow:last-of-type{border-bottom:none}
+.drow dt{font-size:11.5px;font-weight:800;color:var(--muted);margin:0}
+.drow dd{margin:0;font-size:14px;white-space:pre-wrap;word-break:break-word;line-height:1.7}
+.drow dd a{color:var(--accent);word-break:break-all}
+.dimg{margin-top:12px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.dimg img{display:block;width:100%;height:auto}
+@media(max-width:480px){.drow{grid-template-columns:1fr;gap:2px;padding:8px 0}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;z-index:60;
   background:var(--ink);color:var(--bg);font-size:13.5px;font-weight:700;
   padding:11px 20px;border-radius:999px;box-shadow:var(--shadow)}
@@ -177,6 +190,18 @@ footer a{color:var(--accent)}
   <b>新しい活動は、右上の「＋ 活動を追加」から登録できます。</b>スマホからでも書けます。<br>
   書き間違えたときは、げんきさんに言えば直せます。
 </footer>
+</div>
+
+<div class="modal" id="dmodal" hidden>
+  <div class="sheetbox">
+    <div class="sh-h"><span id="d-title">活動の詳細</span><button id="dx" aria-label="閉じる">×</button></div>
+    <div class="sh-b" id="dbody"></div>
+    <div class="sh-f" style="padding:14px 20px 18px">
+      <button id="del" class="danger">削除</button>
+      <button id="edit">編集</button>
+      <button id="dclose" class="primary">閉じる</button>
+    </div>
+  </div>
 </div>
 
 <div class="modal" id="modal" hidden>
@@ -244,7 +269,7 @@ function parseCSV(text){
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 function fromDB(rows){
-  return rows.map(r=>({date:(r.date||'').slice(0,10),kind:r.kind||'その他',title:r.title||'',
+  return rows.map(r=>({id:r.id,date:(r.date||'').slice(0,10),kind:r.kind||'その他',title:r.title||'',
     place:r.place||'',who:r.who||'',desc:r.description||'',url:r.url||'',
     file:r.file_url||'',num:r.metrics||'',year:'',tag:r.tag||''}));
 }
@@ -320,7 +345,7 @@ function render(){
 function card(i){
   const plan=/計画|目標/.test(i.kind);
   return `<div class="item t-${esc(i.kind)}${plan?' plan':''}">
-    <div class="card">
+    <div class="card" data-id="${esc(i.id||'')}" tabindex="0" role="button">
       <div class="c-top">
         <span class="date">${esc(i.date)}</span>
         <span class="badge b-${esc(i.kind)}">${esc(i.kind)}</span>
@@ -377,28 +402,93 @@ function toast(msg){
 
 /* ============ 追加フォーム ============ */
 const modal=document.getElementById('modal'), form=document.getElementById('f');
-let pickKind='投稿', pickWho='';
+const dmodal=document.getElementById('dmodal');
+let pickKind='投稿', pickWho='', editingId=null, detailItem=null;
+const CODE_KEY='kineko-pr-edit-code';
+function getCode(){
+  let c=localStorage.getItem(CODE_KEY)||'';
+  if(!c){ c=(prompt('編集・削除には合言葉が必要です')||'').trim();
+          if(c) localStorage.setItem(CODE_KEY,c); }
+  return c;
+}
+function clearCode(){ localStorage.removeItem(CODE_KEY); }
+function codeHeaders(){ return {...H,'x-edit-code':getCode(),Prefer:'return=representation'}; }
 
 function seg(el,list,cur,onPick){
   el.innerHTML=list.map(v=>`<button type="button" class="${v===cur?'on':''}">${v}</button>`).join('');
   [...el.children].forEach(b=>b.onclick=()=>{ onPick(b.textContent);
     [...el.children].forEach(x=>x.classList.toggle('on',x===b)); });
 }
-function openModal(){
+function openModal(item){
   form.reset(); document.getElementById('err').textContent='';
-  form.date.value=new Date().toISOString().slice(0,10);
-  pickKind='投稿'; pickWho='';
+  editingId = item? item.id : null;
+  document.getElementById('sh-title').textContent = editingId? '活動を編集' : '活動を追加';
+  document.getElementById('save').textContent = editingId? '保存する' : '保存する';
+  if(item){
+    form.date.value=item.date; form.title.value=item.title; form.place.value=item.place;
+    form.who.value=item.who; form.metrics.value=item.num; form.description.value=item.desc;
+    form.url.value=item.url; pickKind=item.kind;
+  }else{
+    form.date.value=new Date().toISOString().slice(0,10); pickKind='投稿';
+  }
+  pickWho='';
   seg(document.getElementById('kindseg'),KINDS,pickKind,v=>pickKind=v);
-  seg(document.getElementById('whoseg'),WHOS,'',v=>{ pickWho=v; form.who.value=v; });
-  document.getElementById('guess').textContent='URLを貼ると、種別と媒体を自動で入れます';
+  seg(document.getElementById('whoseg'),WHOS,item?item.who:'',v=>{ pickWho=v; form.who.value=v; });
+  document.getElementById('guess').textContent = editingId? '' : 'URLを貼ると、種別と媒体を自動で入れます';
   modal.hidden=false; document.body.style.overflow='hidden';
 }
+
+/* ---- 詳細 ---- */
+const DFIELDS=[['date','日付'],['kind','種別'],['title','タイトル'],['place','媒体・場所'],
+  ['who','担当'],['desc','概要'],['num','反応・数字'],['tag','タグ']];
+function openDetail(item){
+  detailItem=item;
+  const rows=DFIELDS.filter(([k])=>item[k]).map(([k,l])=>
+    `<div class="drow"><dt>${l}</dt><dd>${esc(item[k])}</dd></div>`).join('');
+  const links=[
+    item.url?`<div class="drow"><dt>リンク</dt><dd><a href="${esc(item.url)}" target="_blank" rel="noopener">${esc(item.url)}</a></dd></div>`:'',
+    item.file?`<div class="drow"><dt>資料</dt><dd><a href="${esc(item.file)}" target="_blank" rel="noopener">${esc(decodeURIComponent(item.file.split('/').pop()))}</a></dd></div>`:'',
+  ].join('');
+  const img=/\.(png|jpe?g|gif|webp|heic)$/i.test(item.file||'')
+    ? `<div class="dimg"><img src="${esc(item.file)}" alt=""></div>` : '';
+  document.getElementById('dbody').innerHTML=rows+links+img;
+  document.getElementById('del').hidden=!item.id;
+  document.getElementById('edit').hidden=!item.id;
+  dmodal.hidden=false; document.body.style.overflow='hidden';
+}
+function closeDetail(){ dmodal.hidden=true; document.body.style.overflow=''; detailItem=null; }
+document.getElementById('dx').onclick=closeDetail;
+document.getElementById('dclose').onclick=closeDetail;
+dmodal.onclick=e=>{ if(e.target===dmodal) closeDetail(); };
+document.getElementById('edit').onclick=()=>{ const it=detailItem; closeDetail(); openModal(it); };
+document.getElementById('del').onclick=async()=>{
+  const it=detailItem; if(!it) return;
+  if(!confirm(`「${it.title}」を削除します。元に戻せません。`)) return;
+  const code=getCode(); if(!code) return;
+  try{
+    const res=await fetch(REST+'?id=eq.'+it.id,{method:'DELETE',headers:codeHeaders()});
+    const gone=await res.json().catch(()=>[]);
+    if(!res.ok||!gone.length){ clearCode(); throw new Error('合言葉が違うようです'); }
+    closeDetail(); toast('削除しました'); await load();
+  }catch(ex){ alert(ex.message); }
+};
+document.addEventListener('click',e=>{
+  if(e.target.closest('a')||e.target.closest('button')) return;
+  const c=e.target.closest('.card[data-id]'); if(!c) return;
+  const it=ITEMS.find(x=>x.id===c.dataset.id); if(it) openDetail(it);
+});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  const c=e.target.closest?.('.card[data-id]'); if(!c) return;
+  const it=ITEMS.find(x=>x.id===c.dataset.id); if(it) openDetail(it);
+});
 function closeModal(){ modal.hidden=true; document.body.style.overflow=''; }
-document.getElementById('add').onclick=openModal;
+document.getElementById('add').onclick=()=>openModal(null);
 document.getElementById('x').onclick=closeModal;
 document.getElementById('cancel').onclick=closeModal;
 modal.onclick=e=>{ if(e.target===modal) closeModal(); };
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!modal.hidden) closeModal(); });
+document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return;
+  if(!modal.hidden) closeModal(); else if(!dmodal.hidden) closeDetail(); });
 
 const SITES=[
   [/instagram\.com\/reel/i,'投稿','Instagram（リール）'],
@@ -444,9 +534,19 @@ form.addEventListener('submit',async e=>{
       place:form.place.value.trim()||null, who:(form.who.value||pickWho).trim()||null,
       description:form.description.value.trim()||null, url:form.url.value.trim()||null,
       file_url:fileUrl, metrics:form.metrics.value.trim()||null, tag:null };
-    const res=await fetch(REST,{method:'POST',headers:{...H,Prefer:'return=minimal'},body:JSON.stringify(body)});
-    if(!res.ok) throw new Error('保存できませんでした（'+res.status+'）');
-    closeModal(); toast('登録しました'); await load();
+    if(editingId){
+      const code=getCode(); if(!code) throw new Error('合言葉が必要です');
+      if(!fileUrl) delete body.file_url;
+      const res=await fetch(REST+'?id=eq.'+editingId,{method:'PATCH',headers:codeHeaders(),body:JSON.stringify(body)});
+      const changed=await res.json().catch(()=>[]);
+      if(!res.ok||!changed.length){ clearCode(); throw new Error('合言葉が違うようです'); }
+      closeModal(); toast('保存しました');
+    }else{
+      const res=await fetch(REST,{method:'POST',headers:{...H,Prefer:'return=minimal'},body:JSON.stringify(body)});
+      if(!res.ok) throw new Error('保存できませんでした（'+res.status+'）');
+      closeModal(); toast('登録しました');
+    }
+    await load();
   }catch(ex){ err.textContent=ex.message; }
   finally{ save.disabled=false; save.textContent='保存する'; }
 });
