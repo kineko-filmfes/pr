@@ -1,0 +1,43 @@
+name: keepalive
+
+on:
+  schedule:
+    - cron: '17 0 * * 1,4'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Supabaseを起こす
+        env:
+          SB_URL: https://rxlwqkadnqdhcxwcbftr.supabase.co
+          SB_KEY: sb_publishable_Hhgxb1f-PMfHIziyIF8Viw_MM8z35iG
+        run: |
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+            "$SB_URL/rest/v1/pr_activities?select=id&limit=1" \
+            -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY")
+          echo "Supabase応答: HTTP $code" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" != "200" ]; then
+            echo "::error::Supabaseに繋がりませんでした（HTTP $code）"
+            cat /tmp/out.json
+            exit 1
+          fi
+
+      - name: 月に1回だけ記録を残す
+        run: |
+          m=$(date -u +%Y-%m)
+          if grep -q "^$m" keepalive.txt 2>/dev/null; then
+            echo "今月分は記録済み" >> "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+          echo "$m 稼働確認 OK" >> keepalive.txt
+          git config user.name  "keepalive"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add keepalive.txt
+          git commit -m "稼働確認 $m"
+          git push
