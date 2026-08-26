@@ -243,7 +243,7 @@ footer a{color:var(--accent)}
         <label class="fld"><span class="lb">日付</span><input name="date" type="date" required></label>
         <label class="fld"><span class="lb">媒体・場所</span><input name="place" placeholder="Instagram / 会場名など"></label>
       </div>
-      <div class="fld">
+      <div class="fld" id="fmtfield">
         <span class="lb">形式<em>投稿の中身の型</em></span>
         <div class="seg" id="fmtseg"></div>
         <input name="format" placeholder="上になければ自由に書けます">
@@ -315,7 +315,7 @@ function toItems(rows){
   })).filter(x=>x.date||x.title);
 }
 
-let ITEMS=[], TRASH=[], fKind='', fFmt='', fYear='';
+let ITEMS=[], TRASH=[], fKind='', fFmt='', fYear='', HAS_FORMAT=true;
 
 function fiscal(d){ const m=/^(\d{4})-(\d{2})/.exec(d); if(!m) return '';
   return (+m[2]>=4? +m[1] : +m[1]-1)+''; }
@@ -410,6 +410,9 @@ function setMeta(txt){ document.getElementById('meta').textContent=txt; }
 
 async function load(){
   if(READY){
+    try{ const probe=await fetch(REST+'?select=format&limit=1',{headers:H,cache:'no-store'});
+         HAS_FORMAT=probe.ok; }catch(e){ HAS_FORMAT=false; }
+    document.getElementById('fmtfield').hidden=!HAS_FORMAT;
     try{
       const res=await fetch(REST+'?select=*&order=date.desc',{headers:H,cache:'no-store'});
       if(!res.ok) throw new Error('HTTP '+res.status);
@@ -609,7 +612,7 @@ form.addEventListener('submit',async e=>{
     const body={ date:form.date.value, kind:pickKind, title:form.title.value.trim(),
       place:form.place.value.trim()||null, who:(form.who.value||pickWho).trim()||null,
       description:form.description.value.trim()||null, url:form.url.value.trim()||null,
-      format:form.format.value.trim()||null,
+      ...(HAS_FORMAT?{format:form.format.value.trim()||null}:{}),
       file_url:fileUrl, metrics:form.metrics.value.trim()||null, tag:null };
     if(editingId){
       const code=getCode(); if(!code) throw new Error('合言葉が必要です');
