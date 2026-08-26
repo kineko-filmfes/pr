@@ -110,6 +110,42 @@ a.link:hover{background:var(--accent);color:#fff}
   border:1px solid var(--line);border-radius:var(--radius);text-align:center}
 .note{font-size:12.5px;background:var(--amber-soft);color:var(--amber);border-radius:12px;
   padding:11px 15px;margin-bottom:18px;font-weight:600}
+
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{opacity:.88;color:#fff;border-color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+.modal{position:fixed;inset:0;background:rgba(31,27,22,.45);z-index:50;
+  display:flex;align-items:flex-end;justify-content:center;padding:0}
+@media(min-width:640px){.modal{align-items:center;padding:24px}}
+.sheetbox{background:var(--panel);border-radius:20px 20px 0 0;width:100%;max-width:560px;
+  max-height:92vh;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.2)}
+@media(min-width:640px){.sheetbox{border-radius:20px}}
+.sh-h{display:flex;align-items:center;justify-content:space-between;padding:17px 20px 13px;
+  border-bottom:1px solid var(--line);font-size:16px;font-weight:800}
+.sh-h button{border:none;background:none;box-shadow:none;font-size:24px;line-height:1;
+  color:var(--muted);padding:0 4px;cursor:pointer}
+.sh-b{overflow-y:auto;padding:18px 20px 8px}
+.fld{display:block;margin-bottom:15px}
+.lb{display:block;font-size:12px;font-weight:800;color:var(--muted);margin-bottom:5px}
+.lb em{font-style:normal;font-weight:600;opacity:.7;margin-left:6px;font-size:11px}
+.fld input[type=text],.fld input[type=url],.fld input[type=date],.fld input:not([type]),.fld textarea{
+  font:inherit;font-size:15px;width:100%;padding:10px 13px;border-radius:11px;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.fld input:focus,.fld textarea:focus{outline:none;border-color:var(--accent)}
+.fld input[type=file]{font:inherit;font-size:12.5px;width:100%;color:var(--muted)}
+.fld textarea{resize:vertical;line-height:1.7}
+.sub{display:block;font-size:11px;color:var(--muted);margin-top:5px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:480px){.row2{grid-template-columns:1fr}}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:7px}
+.seg button{font-size:12.5px;padding:6px 13px;border-radius:999px;box-shadow:none;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.sh-f{position:sticky;bottom:0;background:var(--panel);display:flex;gap:9px;align-items:center;
+  justify-content:flex-end;padding:14px 0 18px;border-top:1px solid var(--line);margin-top:4px}
+.err{font-size:12px;color:var(--accent);font-weight:700;margin-right:auto;text-align:left}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;z-index:60;
+  background:var(--ink);color:var(--bg);font-size:13.5px;font-weight:700;
+  padding:11px 20px;border-radius:999px;box-shadow:var(--shadow)}
 footer{margin-top:46px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.85}
 footer a{color:var(--accent)}
 @media(max-width:600px){
@@ -125,7 +161,8 @@ footer a{color:var(--accent)}
 <header class="top">
   <h1>キネコ PR活動 保管庫<small id="meta">読み込み中…</small></h1>
   <div class="toolbar">
-    <a class="btn" id="sheet" target="_blank" rel="noopener">スプレッドシートを開く</a>
+    <button class="primary" id="add">＋ 活動を追加</button>
+    <button id="csv">CSVで書き出す</button>
     <button id="reload">最新に更新</button>
   </div>
 </header>
@@ -136,18 +173,59 @@ footer a{color:var(--accent)}
 <div id="body"></div>
 
 <footer>
-  データは Googleスプレッドシート「キネコ PR活動ログ」から読み込んでいます。<br>
-  <b>新しい活動を足すときは、スプレッドシートに1行追加するだけです。</b>このページを開き直せば反映されます。
+  <b>新しい活動は、右上の「＋ 活動を追加」から登録できます。</b>スマホからでも書けます。<br>
+  書き間違えたときは、げんきさんに言えば直せます。
 </footer>
 </div>
 
-<script>
-const SHEET_ID='1ryxnAGsgD-PdZxpGtr_VKsm8UVVX4XnBu-sIakDQt08';
-const SHEET_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/edit';
-const CSV_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv';
-const FALLBACK="日付,種別,タイトル,媒体・場所,担当,概要,URL,ファイル,反応・数字,年度,タグ\n2026-07-24,投稿,【大きなエアスクリーンで夏の夜を楽しみませんか？】,Instagram,キネコ公式,,https://www.instagram.com/p/DbMkEfyAc80/,,いいね40・コメント0,2026,野外上映\n2026-07-25,投稿,【監督に直接、質問できるかも！？】,Instagram,キネコ公式,,https://www.instagram.com/kineko_filmfes/p/DbPxeB-gT_6/,,いいね31・コメント0,2026,ゲスト\n2026-07-26,投稿,【主演俳優 登壇決定！】,Instagram,キネコ公式,,https://www.instagram.com/kineko_filmfes/p/DbRzpnkgdyF/,,いいね37・コメント0,2026,ゲスト\n2026-08-09,投稿,映画を観終えたあと、この作品が伝えたかったことを理解し…,Instagram（リール）,キネコ公式,,https://www.instagram.com/reel/Db2Xap-B76y/,,いいね51・コメント1,2026,感想・リール\n2026-08-11,投稿,映画を観たあとの、素直な感想。,Instagram（リール）,キネコ公式,,https://www.instagram.com/reel/Db7O3G4hYud/,,いいね31・コメント0,2026,感想・リール\n2026-08-28,活動,ティーンズPR活動 ボランティア説明会,新宿三丁目 カイクラフト本社 ＋ Zoom,あつこさん,来社8名・Zoom7名が参加予定。事前アンケート29件の回答まとめは右のURL,https://yamadagenki0526icloudcom-hash.github.io/kineko-volunteers/,,,2026,ボランティア\n2026-04-01,計画・目標,【1年目】ボランティアと協力してPR活動を始める,,,※たたき台。あつこさんと詰める,,,,2026,ロードマップ\n2027-04-01,計画・目標,【2年目】ボランティアがPRの内容を自分たちで考える段階へ,,,※たたき台。あつこさんと詰める,,,,2027,ロードマップ\n2028-04-01,計画・目標,【3年目】企画・ゲスト選定・営業までボランティアが自走する,,,※たたき台。あつこさんと詰める,,,,2028,ロードマップ\n";
+<div class="modal" id="modal" hidden>
+  <div class="sheetbox" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="sh-h"><span id="sh-title">活動を追加</span><button id="x" aria-label="閉じる">×</button></div>
+    <form id="f" class="sh-b">
+      <label class="fld">
+        <span class="lb">投稿・記事のURL</span>
+        <input name="url" type="url" placeholder="https://www.instagram.com/p/…" autocomplete="off">
+        <span class="sub" id="guess">URLを貼ると、種別と媒体を自動で入れます</span>
+      </label>
+      <div class="fld">
+        <span class="lb">種別</span>
+        <div class="seg" id="kindseg"></div>
+      </div>
+      <div class="row2">
+        <label class="fld"><span class="lb">日付</span><input name="date" type="date" required></label>
+        <label class="fld"><span class="lb">媒体・場所</span><input name="place" placeholder="Instagram / 会場名など"></label>
+      </div>
+      <label class="fld"><span class="lb">タイトル</span><input name="title" required placeholder="ひと言で"></label>
+      <div class="fld">
+        <span class="lb">担当</span>
+        <div class="seg" id="whoseg"></div>
+        <input name="who" placeholder="名前や団体名でもOK">
+      </div>
+      <label class="fld">
+        <span class="lb">反応・数字</span>
+        <input name="metrics" placeholder="いいね40・コメント0 / 参加15名 など">
+        <span class="sub">あとで振り返るときに一番効く項目です</span>
+      </label>
+      <label class="fld"><span class="lb">概要<em>任意</em></span><textarea name="description" rows="3" placeholder="何をしたか、2〜3行で"></textarea></label>
+      <label class="fld"><span class="lb">資料ファイル<em>任意</em></span><input name="file" type="file"><span class="sub">ポスター・報告書など</span></label>
+      <div class="sh-f">
+        <span class="err" id="err"></span>
+        <button type="button" id="cancel">やめる</button>
+        <button type="submit" class="primary" id="save">保存する</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-document.getElementById('sheet').href=SHEET_URL;
+<script>
+const SB_URL='';
+const SB_KEY='';
+const READY=/^https:\/\//.test(SB_URL) && SB_KEY.length>20;
+const REST=SB_URL+'/rest/v1/pr_activities';
+const H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
+const FALLBACK="日付,種別,タイトル,媒体・場所,担当,概要,URL,ファイル,反応・数字,年度,タグ\n2026-07-24,投稿,【大きなエアスクリーンで夏の夜を楽しみませんか？】,Instagram,キネコ公式,,https://www.instagram.com/p/DbMkEfyAc80/,,いいね40・コメント0,2026,野外上映\n2026-07-25,投稿,【監督に直接、質問できるかも！？】,Instagram,キネコ公式,,https://www.instagram.com/kineko_filmfes/p/DbPxeB-gT_6/,,いいね31・コメント0,2026,ゲスト\n2026-07-26,投稿,【主演俳優 登壇決定！】,Instagram,キネコ公式,,https://www.instagram.com/kineko_filmfes/p/DbRzpnkgdyF/,,いいね37・コメント0,2026,ゲスト\n2026-08-09,投稿,映画を観終えたあと、この作品が伝えたかったことを理解し…,Instagram（リール）,キネコ公式,,https://www.instagram.com/reel/Db2Xap-B76y/,,いいね51・コメント1,2026,感想・リール\n2026-08-11,投稿,映画を観たあとの、素直な感想。,Instagram（リール）,キネコ公式,,https://www.instagram.com/reel/Db7O3G4hYud/,,いいね31・コメント0,2026,感想・リール\n2026-08-28,活動,ティーンズPR活動 ボランティア説明会,新宿三丁目 カイクラフト本社 ＋ Zoom,あつこさん,来社8名・Zoom7名が参加予定。事前アンケート29件の回答まとめは右のURL,https://yamadagenki0526icloudcom-hash.github.io/kineko-volunteers/,,,2026,ボランティア\n2026-04-01,計画・目標,【1年目】ボランティアと協力してPR活動を始める,,,※たたき台。あつこさんと詰める,,,,2026,ロードマップ\n2027-04-01,計画・目標,【2年目】ボランティアがPRの内容を自分たちで考える段階へ,,,※たたき台。あつこさんと詰める,,,,2027,ロードマップ\n2028-04-01,計画・目標,【3年目】企画・ゲスト選定・営業までボランティアが自走する,,,※たたき台。あつこさんと詰める,,,,2028,ロードマップ\n";
+const KINDS=['投稿','制作物','活動','報告書','メディア掲載','計画・目標'];
+const WHOS=['ボランティア','キネコ公式','スタッフ'];
 
 function parseCSV(text){
   text=text.replace(/^﻿/,'');
@@ -164,6 +242,11 @@ function parseCSV(text){
 }
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
+function fromDB(rows){
+  return rows.map(r=>({date:(r.date||'').slice(0,10),kind:r.kind||'その他',title:r.title||'',
+    place:r.place||'',who:r.who||'',desc:r.description||'',url:r.url||'',
+    file:r.file_url||'',num:r.metrics||'',year:'',tag:r.tag||''}));
+}
 function toItems(rows){
   const head=rows[0].map(s=>s.trim());
   const ix=n=>head.findIndex(h=>h.includes(n));
@@ -260,30 +343,124 @@ document.addEventListener('click',e=>{
   if('year' in c.dataset) fYear=c.dataset.year;
   render();
 });
-document.getElementById('reload').onclick=()=>load(true);
+document.getElementById('reload').onclick=()=>load();
 
 function setMeta(txt){ document.getElementById('meta').textContent=txt; }
 
-async function load(force){
-  try{
-    const res=await fetch(CSV_URL+(force?'&_='+Math.random():''),{cache:'no-store'});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const txt=await res.text();
-    if(/^\s*</.test(txt)) throw new Error('シートが公開されていません');
-    ITEMS=toItems(parseCSV(txt));
-    setMeta(`全${ITEMS.length}件 ／ スプレッドシートから読み込み`);
-    document.querySelector('.note')?.remove();
-  }catch(err){
-    ITEMS=toItems(parseCSV(FALLBACK));
-    setMeta(`全${ITEMS.length}件 ／ このページに保存された内容`);
-    if(!document.querySelector('.note')){
-      const d=document.createElement('div'); d.className='note';
-      d.textContent='スプレッドシートを読み込めませんでした（'+err.message+'）。共有設定を「リンクを知っている全員が閲覧可」にすると、追加した行がそのままここに反映されます。';
-      document.getElementById('road').before(d);
-    }
+async function load(){
+  if(READY){
+    try{
+      const res=await fetch(REST+'?select=*&order=date.desc',{headers:H,cache:'no-store'});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      ITEMS=fromDB(await res.json());
+      setMeta(`全${ITEMS.length}件`);
+      document.querySelector('.note')?.remove();
+      render(); return;
+    }catch(err){ showNote('データを読み込めませんでした（'+err.message+'）'); }
+  }else{
+    showNote('まだ保管庫のデータベースに繋がっていません。下は見本の表示です。');
   }
+  ITEMS=toItems(parseCSV(FALLBACK));
+  setMeta(`全${ITEMS.length}件（見本）`);
   render();
 }
+function showNote(msg){
+  document.querySelector('.note')?.remove();
+  const d=document.createElement('div'); d.className='note'; d.textContent=msg;
+  document.getElementById('road').before(d);
+}
+function toast(msg){
+  const d=document.createElement('div'); d.className='toast'; d.textContent=msg;
+  document.body.appendChild(d); setTimeout(()=>d.remove(),2600);
+}
+
+/* ============ 追加フォーム ============ */
+const modal=document.getElementById('modal'), form=document.getElementById('f');
+let pickKind='投稿', pickWho='';
+
+function seg(el,list,cur,onPick){
+  el.innerHTML=list.map(v=>`<button type="button" class="${v===cur?'on':''}">${v}</button>`).join('');
+  [...el.children].forEach(b=>b.onclick=()=>{ onPick(b.textContent);
+    [...el.children].forEach(x=>x.classList.toggle('on',x===b)); });
+}
+function openModal(){
+  form.reset(); document.getElementById('err').textContent='';
+  form.date.value=new Date().toISOString().slice(0,10);
+  pickKind='投稿'; pickWho='';
+  seg(document.getElementById('kindseg'),KINDS,pickKind,v=>pickKind=v);
+  seg(document.getElementById('whoseg'),WHOS,'',v=>{ pickWho=v; form.who.value=v; });
+  document.getElementById('guess').textContent='URLを貼ると、種別と媒体を自動で入れます';
+  modal.hidden=false; document.body.style.overflow='hidden';
+}
+function closeModal(){ modal.hidden=true; document.body.style.overflow=''; }
+document.getElementById('add').onclick=openModal;
+document.getElementById('x').onclick=closeModal;
+document.getElementById('cancel').onclick=closeModal;
+modal.onclick=e=>{ if(e.target===modal) closeModal(); };
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!modal.hidden) closeModal(); });
+
+const SITES=[
+  [/instagram\.com\/reel/i,'投稿','Instagram（リール）'],
+  [/instagram\.com/i,'投稿','Instagram'],
+  [/note\.com/i,'投稿','note'],
+  [/(twitter|x)\.com/i,'投稿','X'],
+  [/youtube\.com|youtu\.be/i,'投稿','YouTube'],
+  [/tiktok\.com/i,'投稿','TikTok'],
+  [/facebook\.com/i,'投稿','Facebook'],
+  [/prtimes\.jp/i,'メディア掲載','PR TIMES'],
+];
+form.url.addEventListener('input',()=>{
+  const v=form.url.value.trim(); if(!v) return;
+  for(const [re,k,p] of SITES){
+    if(re.test(v)){
+      pickKind=k; form.place.value=p;
+      seg(document.getElementById('kindseg'),KINDS,k,x=>pickKind=x);
+      document.getElementById('guess').textContent=`${p} の${k}として登録します`;
+      return;
+    }
+  }
+  document.getElementById('guess').textContent='種別と媒体は手で選んでください';
+});
+
+form.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const err=document.getElementById('err'), save=document.getElementById('save');
+  err.textContent='';
+  if(!READY){ err.textContent='まだデータベースに繋がっていません'; return; }
+  save.disabled=true; save.textContent='保存中…';
+  try{
+    let fileUrl=null;
+    const f=form.file.files[0];
+    if(f){
+      if(f.size>20*1024*1024) throw new Error('ファイルは20MBまでです');
+      const path=Date.now()+'_'+f.name.replace(/[^\w.\-]/g,'_');
+      const up=await fetch(SB_URL+'/storage/v1/object/pr-files/'+encodeURIComponent(path),
+        {method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},body:f});
+      if(!up.ok) throw new Error('ファイルを上げられませんでした');
+      fileUrl=SB_URL+'/storage/v1/object/public/pr-files/'+encodeURIComponent(path);
+    }
+    const body={ date:form.date.value, kind:pickKind, title:form.title.value.trim(),
+      place:form.place.value.trim()||null, who:(form.who.value||pickWho).trim()||null,
+      description:form.description.value.trim()||null, url:form.url.value.trim()||null,
+      file_url:fileUrl, metrics:form.metrics.value.trim()||null, tag:null };
+    const res=await fetch(REST,{method:'POST',headers:{...H,Prefer:'return=minimal'},body:JSON.stringify(body)});
+    if(!res.ok) throw new Error('保存できませんでした（'+res.status+'）');
+    closeModal(); toast('登録しました'); await load();
+  }catch(ex){ err.textContent=ex.message; }
+  finally{ save.disabled=false; save.textContent='保存する'; }
+});
+
+/* ============ CSV書き出し ============ */
+document.getElementById('csv').onclick=()=>{
+  const q=v=>'"'+(v||'').replace(/"/g,'""')+'"';
+  let out='\ufeff日付,種別,タイトル,媒体・場所,担当,概要,URL,ファイル,反応・数字,タグ\n';
+  ITEMS.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(i=>{
+    out+=[i.date,i.kind,i.title,i.place,i.who,i.desc,i.url,i.file,i.num,i.tag].map(q).join(',')+'\n'; });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([out],{type:'text/csv'}));
+  a.download='キネコPR活動ログ.csv'; a.click();
+};
+
 load(false);
 </script>
 </body>
