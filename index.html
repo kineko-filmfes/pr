@@ -97,6 +97,7 @@ button:hover,.btn:hover{border-color:var(--accent);color:var(--accent)}
 .badge.b-制作物{background:var(--violet-soft);color:var(--violet)}
 .badge.b-報告書{background:var(--green-soft);color:var(--green)}
 .badge.b-メディア掲載{background:var(--amber-soft);color:var(--amber)}
+.badge.b-fmt{background:var(--violet-soft);color:var(--violet)}
 .who{font-size:11.5px;color:var(--muted);margin-left:auto}
 .title{font-size:15px;font-weight:600;line-height:1.55;letter-spacing:-.005em;word-break:break-word}
 .desc{font-size:13px;color:var(--muted);margin-top:5px;white-space:pre-wrap;line-height:1.7}
@@ -242,6 +243,11 @@ footer a{color:var(--accent)}
         <label class="fld"><span class="lb">日付</span><input name="date" type="date" required></label>
         <label class="fld"><span class="lb">媒体・場所</span><input name="place" placeholder="Instagram / 会場名など"></label>
       </div>
+      <div class="fld">
+        <span class="lb">形式<em>投稿の中身の型</em></span>
+        <div class="seg" id="fmtseg"></div>
+        <input name="format" placeholder="上になければ自由に書けます">
+      </div>
       <label class="fld"><span class="lb">タイトル</span><input name="title" required placeholder="ひと言で"></label>
       <div class="fld">
         <span class="lb">担当</span>
@@ -273,6 +279,7 @@ const H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'applicatio
 const FALLBACK="日付,種別,タイトル,媒体・場所,担当,概要,URL,ファイル,反応・数字,年度,タグ\n2026-07-24,投稿,【大きなエアスクリーンで夏の夜を楽しみませんか？】,Instagram,キネコ公式,,https://www.instagram.com/p/DbMkEfyAc80/,,いいね40・コメント0,2026,野外上映\n2026-07-25,投稿,【監督に直接、質問できるかも！？】,Instagram,キネコ公式,,https://www.instagram.com/kineko_filmfes/p/DbPxeB-gT_6/,,いいね31・コメント0,2026,ゲスト\n2026-07-26,投稿,【主演俳優 登壇決定！】,Instagram,キネコ公式,,https://www.instagram.com/kineko_filmfes/p/DbRzpnkgdyF/,,いいね37・コメント0,2026,ゲスト\n2026-08-09,投稿,映画を観終えたあと、この作品が伝えたかったことを理解し…,Instagram（リール）,キネコ公式,,https://www.instagram.com/reel/Db2Xap-B76y/,,いいね51・コメント1,2026,感想・リール\n2026-08-11,投稿,映画を観たあとの、素直な感想。,Instagram（リール）,キネコ公式,,https://www.instagram.com/reel/Db7O3G4hYud/,,いいね31・コメント0,2026,感想・リール\n2026-08-28,活動,ティーンズPR活動 ボランティア説明会,新宿三丁目 カイクラフト本社 ＋ Zoom,あつこさん,来社8名・Zoom7名が参加予定。事前アンケート29件の回答まとめは右のURL,https://kineko-filmfes.github.io/volunteers/,,,2026,ボランティア\n2026-04-01,計画・目標,【1年目】ボランティアと協力してPR活動を始める,,,※たたき台。あつこさんと詰める,,,,2026,ロードマップ\n2027-04-01,計画・目標,【2年目】ボランティアがPRの内容を自分たちで考える段階へ,,,※たたき台。あつこさんと詰める,,,,2027,ロードマップ\n2028-04-01,計画・目標,【3年目】企画・ゲスト選定・営業までボランティアが自走する,,,※たたき台。あつこさんと詰める,,,,2028,ロードマップ\n";
 const KINDS=['投稿','制作物','活動','報告書','メディア掲載','計画・目標'];
 const WHOS=['ボランティア','キネコ公式','スタッフ'];
+const FORMATS=['告知','インタビュー動画','ミニ感想文','ディスカッション要約','レポート','写真'];
 
 function parseCSV(text){
   text=text.replace(/^﻿/,'');
@@ -292,7 +299,7 @@ const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"
 function fromDB(rows){
   return rows.map(r=>({id:r.id,del:r.deleted_at,date:(r.date||'').slice(0,10),kind:r.kind||'その他',title:r.title||'',
     place:r.place||'',who:r.who||'',desc:r.description||'',url:r.url||'',
-    file:r.file_url||'',num:r.metrics||'',year:'',tag:r.tag||''}));
+    file:r.file_url||'',num:r.metrics||'',year:'',tag:r.tag||'',fmt:r.format||''}));
 }
 function toItems(rows){
   const head=rows[0].map(s=>s.trim());
@@ -308,7 +315,7 @@ function toItems(rows){
   })).filter(x=>x.date||x.title);
 }
 
-let ITEMS=[], TRASH=[], fKind='', fYear='';
+let ITEMS=[], TRASH=[], fKind='', fFmt='', fYear='';
 
 function fiscal(d){ const m=/^(\d{4})-(\d{2})/.exec(d); if(!m) return '';
   return (+m[2]>=4? +m[1] : +m[1]-1)+''; }
@@ -316,7 +323,7 @@ function fiscal(d){ const m=/^(\d{4})-(\d{2})/.exec(d); if(!m) return '';
 function render(){
   const years=[...new Set(ITEMS.map(i=>i.year||fiscal(i.date)).filter(Boolean))].sort();
   const kinds=[...new Set(ITEMS.map(i=>i.kind))];
-  const P=ITEMS.filter(i=>(!fKind||i.kind===fKind)&&(!fYear||(i.year||fiscal(i.date))===fYear));
+  const P=ITEMS.filter(i=>(!fKind||i.kind===fKind)&&(!fFmt||i.fmt===fFmt)&&(!fYear||(i.year||fiscal(i.date))===fYear));
 
   /* ロードマップ */
   const plans=ITEMS.filter(i=>/計画|目標/.test(i.kind)).sort((a,b)=>a.date.localeCompare(b.date));
@@ -344,10 +351,15 @@ function render(){
 
   /* 絞り込み */
   const chip=(v,l,n,cur,attr)=>`<button class="chip${cur===v?' on':''}" data-${attr}="${esc(v)}">${esc(l)}<b>${n}</b></button>`;
+  const fmts=[...new Set(ITEMS.map(i=>i.fmt).filter(Boolean))]
+    .sort((a,b)=>ITEMS.filter(i=>i.fmt===b).length-ITEMS.filter(i=>i.fmt===a).length);
   document.getElementById('filters').innerHTML=
     `<span class="f-l">種別</span>`+
     chip('','すべて',ITEMS.length,fKind,'kind')+
     kinds.map(k=>chip(k,k,ITEMS.filter(i=>i.kind===k).length,fKind,'kind')).join('')+
+    (fmts.length?`<span class="f-l" style="margin-left:10px">形式</span>`+
+      chip('','すべて',ITEMS.length,fFmt,'fmt')+
+      fmts.map(f=>chip(f,f,ITEMS.filter(i=>i.fmt===f).length,fFmt,'fmt')).join(''):'')+
     (years.length>1?`<span class="f-l" style="margin-left:10px">年度</span>`+
       chip('','すべて',ITEMS.length,fYear,'year')+
       years.map(y=>chip(y,y+'年度',ITEMS.filter(i=>(i.year||fiscal(i.date))===y).length,fYear,'year')).join(''):'');
@@ -370,6 +382,7 @@ function card(i){
       <div class="c-top">
         <span class="date">${esc(i.date)}</span>
         <span class="badge b-${esc(i.kind)}">${esc(i.kind)}</span>
+        ${i.fmt?`<span class="badge b-fmt">${esc(i.fmt)}</span>`:''}
         ${i.who?`<span class="who">${esc(i.who)}</span>`:''}
       </div>
       <div class="title">${esc(i.title)}</div>
@@ -387,6 +400,7 @@ function card(i){
 document.addEventListener('click',e=>{
   const c=e.target.closest('.chip'); if(!c) return;
   if('kind' in c.dataset) fKind=c.dataset.kind;
+  if('fmt' in c.dataset) fFmt=c.dataset.fmt;
   if('year' in c.dataset) fYear=c.dataset.year;
   render();
 });
@@ -464,12 +478,14 @@ function openModal(item){
   pickWho='';
   seg(document.getElementById('kindseg'),KINDS,pickKind,v=>pickKind=v);
   seg(document.getElementById('whoseg'),WHOS,item?item.who:'',v=>{ pickWho=v; form.who.value=v; });
+  if(item) form.format.value=item.fmt;
+  seg(document.getElementById('fmtseg'),FORMATS,item?item.fmt:'',v=>{ form.format.value=v; });
   document.getElementById('guess').textContent = editingId? '' : 'URLを貼ると、種別と媒体を自動で入れます';
   modal.hidden=false; document.body.style.overflow='hidden';
 }
 
 /* ---- 詳細 ---- */
-const DFIELDS=[['date','日付'],['kind','種別'],['title','タイトル'],['place','媒体・場所'],
+const DFIELDS=[['date','日付'],['kind','種別'],['fmt','形式'],['title','タイトル'],['place','媒体・場所'],
   ['who','担当'],['desc','概要'],['num','反応・数字'],['tag','タグ']];
 function openDetail(item){
   detailItem=item;
@@ -593,6 +609,7 @@ form.addEventListener('submit',async e=>{
     const body={ date:form.date.value, kind:pickKind, title:form.title.value.trim(),
       place:form.place.value.trim()||null, who:(form.who.value||pickWho).trim()||null,
       description:form.description.value.trim()||null, url:form.url.value.trim()||null,
+      format:form.format.value.trim()||null,
       file_url:fileUrl, metrics:form.metrics.value.trim()||null, tag:null };
     if(editingId){
       const code=getCode(); if(!code) throw new Error('合言葉が必要です');
@@ -614,9 +631,9 @@ form.addEventListener('submit',async e=>{
 /* ============ CSV書き出し ============ */
 document.getElementById('csv').onclick=()=>{
   const q=v=>'"'+(v||'').replace(/"/g,'""')+'"';
-  let out='\ufeff日付,種別,タイトル,媒体・場所,担当,概要,URL,ファイル,反応・数字,タグ\n';
+  let out='\ufeff日付,種別,形式,タイトル,媒体・場所,担当,概要,URL,ファイル,反応・数字,タグ\n';
   ITEMS.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(i=>{
-    out+=[i.date,i.kind,i.title,i.place,i.who,i.desc,i.url,i.file,i.num,i.tag].map(q).join(',')+'\n'; });
+    out+=[i.date,i.kind,i.fmt,i.title,i.place,i.who,i.desc,i.url,i.file,i.num,i.tag].map(q).join(',')+'\n'; });
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([out],{type:'text/csv'}));
   a.download='キネコPR活動ログ.csv'; a.click();
