@@ -68,6 +68,9 @@ button:hover,.btn:hover{border-color:var(--accent);color:var(--accent)}
 .chip:hover{border-color:var(--accent);color:var(--accent)}
 .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .chip.on b{opacity:.85}
+.chip.zero{opacity:.38;cursor:default}
+.chip.zero:hover{border-color:var(--line);color:inherit}
+.empty .chip{margin-top:12px}
 
 /* タイムライン */
 .year{display:flex;align-items:center;gap:12px;margin:30px 0 16px}
@@ -349,20 +352,24 @@ function render(){
     <div class="tile"><div class="n">${acts}</div><div class="l">イベント・集まり</div></div>
     <div class="tile"><div class="n">${vol}</div><div class="l">ボランティアが担当</div></div>`;
 
-  /* 絞り込み */
-  const chip=(v,l,n,cur,attr)=>`<button class="chip${cur===v?' on':''}" data-${attr}="${esc(v)}">${esc(l)}<b>${n}</b></button>`;
+  /* 絞り込み。数字は「ほかの行で選んでいる条件」を反映して数える。0件のチップは押せなくする */
+  const yOf=i=>i.year||fiscal(i.date);
+  const okExcept=(i,skip)=>(skip==='kind'||!fKind||i.kind===fKind)&&(skip==='fmt'||!fFmt||i.fmt===fFmt)&&(skip==='year'||!fYear||yOf(i)===fYear);
+  const cnt=(skip,pred)=>ITEMS.filter(i=>okExcept(i,skip)&&pred(i)).length;
+  const chip=(v,l,n,cur,attr)=>{ const z=n===0&&cur!==v;
+    return `<button class="chip${cur===v?' on':''}${z?' zero':''}" data-${attr}="${esc(v)}"${z?' disabled':''}>${esc(l)}<b>${n}</b></button>`; };
   const fmts=[...new Set(ITEMS.map(i=>i.fmt).filter(Boolean))]
     .sort((a,b)=>ITEMS.filter(i=>i.fmt===b).length-ITEMS.filter(i=>i.fmt===a).length);
   document.getElementById('filters').innerHTML=
     `<span class="f-l">種別</span>`+
-    chip('','すべて',ITEMS.length,fKind,'kind')+
-    kinds.map(k=>chip(k,k,ITEMS.filter(i=>i.kind===k).length,fKind,'kind')).join('')+
+    chip('','すべて',cnt('kind',()=>true),fKind,'kind')+
+    kinds.map(k=>chip(k,k,cnt('kind',i=>i.kind===k),fKind,'kind')).join('')+
     (fmts.length?`<span class="f-l" style="margin-left:10px">形式</span>`+
-      chip('','すべて',ITEMS.length,fFmt,'fmt')+
-      fmts.map(f=>chip(f,f,ITEMS.filter(i=>i.fmt===f).length,fFmt,'fmt')).join(''):'')+
+      chip('','すべて',cnt('fmt',()=>true),fFmt,'fmt')+
+      fmts.map(f=>chip(f,f,cnt('fmt',i=>i.fmt===f),fFmt,'fmt')).join(''):'')+
     (years.length>1?`<span class="f-l" style="margin-left:10px">年度</span>`+
-      chip('','すべて',ITEMS.length,fYear,'year')+
-      years.map(y=>chip(y,y+'年度',ITEMS.filter(i=>(i.year||fiscal(i.date))===y).length,fYear,'year')).join(''):'');
+      chip('','すべて',cnt('year',()=>true),fYear,'year')+
+      years.map(y=>chip(y,y+'年度',cnt('year',i=>yOf(i)===y),fYear,'year')).join(''):'');
 
   /* タイムライン */
   const byYear={};
@@ -372,7 +379,7 @@ function render(){
   document.getElementById('body').innerHTML = keys.length? keys.map(y=>`
     <div class="year"><h2>${esc(y)}年度</h2><span class="cnt">${byYear[y].length}件</span><hr></div>
     <div class="tl">${byYear[y].map(card).join('')}</div>`).join('')
-    : `<div class="empty">該当する記録がありません</div>`;
+    : `<div class="empty">この組み合わせに当てはまる記録はありません<br><button class="chip" data-reset="1">絞り込みを外す</button></div>`;
 }
 
 function card(i){
@@ -398,7 +405,8 @@ function card(i){
 }
 
 document.addEventListener('click',e=>{
-  const c=e.target.closest('.chip'); if(!c) return;
+  const c=e.target.closest('.chip'); if(!c||c.disabled) return;
+  if('reset' in c.dataset){ fKind=''; fFmt=''; fYear=''; render(); return; }
   if('kind' in c.dataset) fKind=c.dataset.kind;
   if('fmt' in c.dataset) fFmt=c.dataset.fmt;
   if('year' in c.dataset) fYear=c.dataset.year;
